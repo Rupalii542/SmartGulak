@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Register - SmartGulak</title>
+<title>Login - SmartGulak</title>
 <style>
   body {
     background: #0d1b2a;
@@ -46,17 +46,21 @@
 </head>
 <body>
   <div class="container">
-    <h2>Create Account</h2>
-    <input type="email" id="regEmail" placeholder="Email address" required>
-    <input type="password" id="regPass" placeholder="Password" required>
-    <button onclick="register()">Register</button>
-    <p style="margin-top:10px;">Already have an account? <a href="login.html">Login</a></p>
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email address" required>
+    <input type="password" id="loginPass" placeholder="Password" required>
+    <button onclick="login()">Login</button>
+    <p style="margin-top:10px;">Don’t have an account? <a href="register.html">Register</a></p>
+    <p style="text-align: right; margin-top: 5px;">
+  <a href="forgot.html" style="color:#6c63ff; text-decoration:none; align-content:  center;">Forgot Password?</a>
+</p>
+
   </div>
 
   <script>
-    function register() {
-      const email = document.getElementById('regEmail').value.trim().toLowerCase();
-      const pass = document.getElementById('regPass').value.trim();
+    function login() {
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPass').value.trim();
 
       if (!email || !pass) {
         alert('Please fill all fields');
@@ -65,13 +69,11 @@
 
       const users = JSON.parse(localStorage.getItem('users')) || {};
 
-      if (users[email]) {
-        alert('User with this email already exists!');
+      if (users[email] && users[email] === pass) {
+        localStorage.setItem('username', email);
+        window.location.href = 'sidebar.html';
       } else {
-        users[email] = pass;
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('Registration successful!');
-        window.location.href = 'login.html';
+        alert('Invalid email or password');
       }
     }
   </script>

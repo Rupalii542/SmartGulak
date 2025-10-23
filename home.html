@@ -134,7 +134,7 @@
 
       // Username
       const username = localStorage.getItem('username');
-      if(!username && window.location.pathname !== '/index.html') window.location.href='index.html';
+      if(!username && window.location.pathname !== '/login.html') window.location.href='login.html';
       document.getElementById('userHome').textContent = username || 'User';
 
       // Load Transactions
