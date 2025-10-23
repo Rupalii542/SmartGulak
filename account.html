@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Settings - SmartGulak</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      height: 100vh;
+    }
+
+    #sidebarContainer { flex-shrink: 0; }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+      background: #f5f7fa;
+      overflow-y: auto;
+      transition: margin-left 0.3s ease;
+    }
+
+    .account-container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 30px 40px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(30px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    .account-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .account-header h1 {
+      font-size: 26px;
+      color: #1b263b;
+      margin-bottom: 10px;
+    }
+
+    .account-header p {
+      color: #555;
+      font-size: 14px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus {
+      border-color: #6c63ff;
+      box-shadow: 0 0 5px rgba(108,99,255,0.3);
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 25px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-save {
+      background: #6c63ff;
+      color: #fff;
+    }
+
+    .btn-save:hover {
+      background: #554ee0;
+    }
+
+    .btn-logout {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .btn-logout:hover {
+      background: #b92c3a;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .account-container { padding: 25px 20px; margin: 20px; }
+      .button-group { flex-direction: column; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebarContainer"></div>
+
+  <!-- Main Content -->
+  <div class="content">
+    <div class="account-container">
+      <div class="account-header">
+        <h1><i class="fa-solid fa-user-circle"></i> Account Settings</h1>
+        <p>Update your profile details or change your password securely.</p>
+      </div>
+
+      <form id="accountForm">
+        <div class="form-group">
+          <label for="usernameInput">Username</label>
+          <input type="text" id="usernameInput" required>
+        </div>
+
+        <div class="form-group">
+          <label for="emailInput">Email</label>
+          <input type="email" id="emailInput" required>
+        </div>
+
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+
+        <div class="form-group">
+          <label for="oldPasswordInput">Old Password</label>
+          <input type="password" id="oldPasswordInput" placeholder="Enter old password to change" />
+        </div>
+
+        <div class="form-group">
+          <label for="newPasswordInput">New Password</label>
+          <input type="password" id="newPasswordInput" placeholder="Enter new password (optional)" />
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="btn btn-save"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          <button type="button" id="logoutBtn" class="btn btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+
+        <div class="message" id="messageBox"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const username = localStorage.getItem('username') || 'User';
+      const email = localStorage.getItem('email') || 'user@example.com';
+      const savedPassword = localStorage.getItem('password') || '';
+
+      document.getElementById('usernameInput').value = username;
+      document.getElementById('emailInput').value = email;
+
+      const msg = document.getElementById('messageBox');
+
+      // Save changes
+document.getElementById('accountForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const newUsername = document.getElementById('usernameInput').value.trim();
+  const newEmail = document.getElementById('emailInput').value.trim();
+  const oldPass = document.getElementById('oldPasswordInput').value.trim();
+  const newPass = document.getElementById('newPasswordInput').value.trim();
+
+  const savedPassword = localStorage.getItem('password') || ''; // ✅ moved here
+
+  // Update username/email always
+  localStorage.setItem('username', newUsername);
+  localStorage.setItem('email', newEmail);
+
+  // Password change check
+  if (newPass && oldPass) {
+    if (oldPass === savedPassword) {
+      localStorage.setItem('password', newPass);
+      msg.style.color = 'green';
+      msg.textContent = '✅ Password changed successfully!';
+    } else {
+      msg.style.color = 'red';
+      msg.textContent = '❌ Old password is incorrect!';
+      return;
+    }
+  } else if (newPass && !oldPass) {
+    msg.style.color = 'orange';
+    msg.textContent = '⚠️ Please enter old password to change your password.';
+    return;
+  } else {
+    msg.style.color = 'green';
+    msg.textContent = '✅ Profile updated successfully!';
+  }
+
+  setTimeout(() => msg.textContent = '', 3000);
+});
+    
+
+      // Logout functionality
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout?')) {
+          localStorage.clear();
+          window.location.href = 'index.html';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

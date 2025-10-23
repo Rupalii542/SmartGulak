@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartGulak | Category Expense</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      background: #f5f7fa;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar container */
+    #sidebarContainer {
+      flex-shrink: 0;
+    }
+
+    /* Main content */
+    .main-content {
+      flex: 1;
+      padding: 30px 40px;
+      overflow-y: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1b263b;
+      margin-bottom: 25px;
+    }
+
+    .chart-container {
+      background: #fff;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      transition: 0.3s;
+    }
+
+    .chart-container:hover {
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    select:focus {
+      border-color: #6c63ff;
+      box-shadow: 0 0 5px rgba(108, 99, 255, 0.3);
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      aspect-ratio: 1/1; 
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 20px;
+      }
+      .chart-container {
+        max-width: 100%;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar will load here -->
+  <div id="sidebarContainer"></div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Monthly Category Expense</h1>
+
+    <div class="chart-container">
+      <select id="monthSelect">
+        <option value="">Select Month</option>
+        <option value="2025-01">January</option>
+        <option value="2025-02">February</option>
+        <option value="2025-03">March</option>
+        <option value="2025-04">April</option>
+        <option value="2025-05">May</option>
+        <option value="2025-06">June</option>
+        <option value="2025-07">July</option>
+        <option value="2025-08">August</option>
+        <option value="2025-09">September</option>
+        <option value="2025-10">October</option>
+        <option value="2025-11">November</option>
+        <option value="2025-12">December</option>
+      </select>
+
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // 🔹 Load sidebar dynamically
+    fetch("sidebar.html")
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("sidebarContainer").innerHTML = data;
+
+        // Set username
+        const usernameElem = document.getElementById("username");
+        if (usernameElem) {
+          usernameElem.textContent = localStorage.getItem("username") || "User";
+        }
+
+        // Sidebar toggle
+        const sidebar = document.getElementById("sidebar");
+        const toggleBtn = document.getElementById("toggleBtn");
+        if (toggleBtn && sidebar) {
+          toggleBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("collapsed");
+            toggleBtn.querySelector("i").classList.toggle("fa-angle-right");
+            toggleBtn.querySelector("i").classList.toggle("fa-angle-left");
+          });
+        }
+      });
+
+    const monthSelect = document.getElementById("monthSelect");
+    const ctx = document.getElementById("categoryChart").getContext("2d");
+    let categoryChart;
+
+    // 🔹 Get transactions from localStorage
+    function getTransactions() {
+      const data = localStorage.getItem("transactions");
+      return data ? JSON.parse(data) : [];
+    }
+
+    // 🔹 Render chart (Expense only)
+    function renderChart(month) {
+      const transactions = getTransactions();
+      const filtered = transactions.filter(t => 
+        t.date.startsWith(month) && t.type === "Expense"
+      );
+
+      const categoryTotals = {};
+      filtered.forEach(t => {
+        categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount);
+      });
+
+      const categories = Object.keys(categoryTotals);
+      const amounts = Object.values(categoryTotals);
+
+      if (categoryChart) categoryChart.destroy();
+
+      categoryChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: categories,
+          datasets: [{
+            data: amounts,
+            backgroundColor: [
+              "#ff6384", "#36a2eb", "#ffce56",
+              "#4bc0c0", "#9966ff", "#ff9f40",
+              "#9ad0f5", "#ffb6c1", "#a3e635"
+            ],
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: `Expense Breakdown - ${month}`,
+              font: { size: 17 },
+              color: "#1b263b"
+            },
+            legend: {
+              position: "bottom",
+              labels: { color: "#333" }
+            },
+          },
+        },
+      });
+    }
+
+    // 🔹 Month selection event
+    monthSelect.addEventListener("change", (e) => {
+      const month = e.target.value;
+      if (month) renderChart(month);
+    });
+  </script>
+</body>
+</html>

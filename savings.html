@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Savings - SmartGulak</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="sidebarContainer"></div>
+
+  <div class="content">
+    <h1>Savings Overview</h1>
+    <p>Analyze how your savings are growing over time.</p>
+    <canvas id="savingsChart"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="main.js"></script>
+  <script>
+    const ctx = document.getElementById('savingsChart');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+        datasets: [{
+          label: 'Savings ($)',
+          data: [200,400,650,900,1200,1600],
+          borderColor: '#6c63ff',
+          tension: 0.3
+        }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+</body>
+</html>

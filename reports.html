@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartGulak Reports</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+  body { margin:0; font-family:"Poppins",sans-serif; display:flex; background:#f5f7fa; }
+  #sidebarContainer { flex-shrink:0; }
+  .content { flex:1; padding:20px 30px; }
+  h1 { color:#1b263b; margin-bottom:20px; }
+
+  .controls { display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; }
+  input, select { padding:8px 12px; border-radius:6px; border:1px solid #ccc; outline:none; }
+  button { padding:8px 15px; background:#6c63ff; color:#fff; border:none; border-radius:8px; cursor:pointer; transition:0.3s; }
+  button:hover { background:#5848c2; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:15px; }
+  th, td { padding:12px 15px; text-align:left; }
+  thead { background:#6c63ff; color:#fff; }
+  tbody tr { border-bottom:1px solid #eee; }
+  tbody tr:last-child { border-bottom:none; }
+
+ #chartContainer {
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+  margin-top:20px;
+  max-width:600px;      /* Limit width */
+  margin-left:auto;      /* Center it */
+  margin-right:auto;
+}
+#chartContainer canvas {
+  width:100% !important;
+  height:300px !important; /* Fixed height */
+}
+
+</style>
+</head>
+<body>
+
+<div id="sidebarContainer"></div>
+
+<div class="content">
+  <h1>Monthly Reports</h1>
+
+  <div class="controls">
+    <input type="month" id="monthInput">
+    <button id="searchBtn">Search</button>
+    <button id="downloadBtn">Download PDF</button>
+  </div>
+
+  <table id="reportTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th>Amount (₹)</th>
+        <th>Type</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="chartContainer">
+    <canvas id="reportChart"></canvas>
+  </div>
+</div>
+
+<script>
+// Load Sidebar
+fetch('sidebar.html')
+.then(res => res.text())
+.then(data => document.getElementById('sidebarContainer').innerHTML = data);
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const monthInput = document.getElementById('monthInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const reportTableBody = document.querySelector('#reportTable tbody');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const chartCanvas = document.getElementById('reportChart');
+  let chartInstance = null;
+
+  function getTransactions(){
+    return JSON.parse(localStorage.getItem('transactions')) || [];
+  }
+
+  function formatDate(d){
+    const date = new Date(d);
+    return date.toLocaleDateString('en-US', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  function filterTransactions(month){
+    const [year, mon] = month.split('-');
+    return getTransactions().filter(t=>{
+      const date = new Date(t.date);
+      return date.getFullYear() === parseInt(year) && (date.getMonth()+1) === parseInt(mon);
+    });
+  }
+
+  function renderTable(transactions){
+    reportTableBody.innerHTML = '';
+    if(transactions.length === 0){
+      reportTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No transactions found for this month.</td></tr>`;
+      return;
+    }
+    transactions.forEach(t=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${formatDate(t.date)}</td>
+        <td>${t.description}</td>
+        <td>${t.category}</td>
+        <td>₹${t.amount}</td>
+        <td>${t.type}</td>
+      `;
+      reportTableBody.appendChild(row);
+    });
+  }
+
+  function renderChart(transactions){
+    const income = transactions.filter(t=>t.type==='Income').reduce((a,b)=>a+b.amount,0);
+    const expense = transactions.filter(t=>t.type==='Expense').reduce((a,b)=>a+b.amount,0);
+
+    const data = {
+      labels: ['Income', 'Expense'],
+      datasets:[{
+        label:'Amount (₹)',
+        data:[income, expense],
+        backgroundColor:['#28a745','#dc3545']
+      }]
+    };
+
+    const config = {
+      type:'bar',
+      data:data,
+      options:{ responsive:true, 
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    };
+
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(chartCanvas, config);
+  }
+
+  searchBtn.addEventListener('click', ()=>{
+    const month = monthInput.value;
+    if(!month) return alert('Please select month');
+    const filtered = filterTransactions(month);
+    renderTable(filtered);
+    renderChart(filtered);
+  });
+
+  downloadBtn.addEventListener('click', async ()=>{
+    const month = monthInput.value;
+    if(!month) return alert('Please select month');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text(`Report - ${month}`, 40, 40);
+
+    // Add table using html2canvas
+    const table = document.getElementById('reportTable');
+    const canvasTable = await html2canvas(table);
+    const imgDataTable = canvasTable.toDataURL('image/png');
+    doc.addImage(imgDataTable, 'PNG', 40, 60, 520, canvasTable.height * 520 / canvasTable.width);
+
+    // Add chart
+    const canvasChart = await html2canvas(chartCanvas);
+    const imgDataChart = canvasChart.toDataURL('image/png');
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.text('Income vs Expense', 40, 40);
+    doc.addImage(imgDataChart, 'PNG', 40, 60, 520, 300); // fixed height
+
+    // doc.addImage(imgDataChart, 'PNG', 40, 60, 520, canvasChart.height * 520 / canvasChart.width);
+
+    doc.save(`Report_${month}.pdf`);
+  });
+});
+</script>
+</body>
+</html>

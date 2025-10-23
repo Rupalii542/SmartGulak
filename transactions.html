@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartGulak Transactions</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:"Poppins",sans-serif; }
+    body { display:flex; min-height:100vh; background:#f5f7fa; }
+
+    /* Sidebar placeholder */
+    #sidebarContainer { flex-shrink:0; }
+
+    /* Content */
+    .content { flex:1; padding:30px; overflow-y:auto; }
+    h1 { color:#1b263b; margin-bottom:20px; }
+
+    /* Summary Cards */
+    .summary-cards { display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }
+    .summary-card {
+      flex:1; min-width:180px; background:#fff;
+      border-radius:12px; padding:20px;
+      box-shadow:0 6px 20px rgba(0,0,0,0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .summary-card:hover { transform:translateY(-5px); box-shadow:0 10px 25px rgba(0,0,0,0.15); }
+    .summary-card h3 { font-size:16px; margin-bottom:5px; color:#1b263b; }
+    .summary-card p { font-size:20px; font-weight:600; }
+
+    /* Page Header */
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; }
+    #addTransactionBtn { padding:8px 15px; background:#6c63ff; color:#fff; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease; }
+    #addTransactionBtn:hover { background:#5848c2; }
+
+    /* Filter Dropdown */
+    #filterType { padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
+
+    /* Modal */
+    #transactionModal {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); justify-content:center; align-items:center;
+      opacity:0; transition:opacity 0.3s ease; z-index:1000;
+    }
+    #transactionModal.show { display:flex; opacity:1; }
+    #transactionModal div {
+      background:#fff; border-radius:12px; padding:30px;
+      width:90%; max-width:450px;
+      transform:translateY(-50px); transition:transform 0.3s ease;
+    }
+    #transactionModal.show div { transform:translateY(0); }
+    #transactionForm input, #transactionForm select { width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px; outline:none; }
+    #transactionForm .error { color:#dc3545; font-size:12px; margin-bottom:5px; display:none; }
+
+    .modal-btn { flex:1; padding:10px 0; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; transition:all 0.3s ease; }
+    .modal-btn.add-btn { background:#6c63ff; color:#fff; }
+    .modal-btn.add-btn:hover { background:#5848c2; }
+    .modal-btn.cancel-btn { background:#ccc; color:#000; }
+    .modal-btn.cancel-btn:hover { background:#aaa; }
+
+    /* Transactions Table */
+    .transactions-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 6px 20px rgba(0,0,0,0.08); overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; min-width:600px; }
+    thead tr { background:#6c63ff; color:#fff; text-align:left; }
+    th, td { padding:12px 15px; }
+    tbody tr { border-bottom:1px solid #eee; transition:all 0.3s ease; }
+    tbody tr:hover { background:#f0f0f0; transform:scale(1.02); }
+    tbody tr:nth-child(even) { background:#fafafa; }
+
+    /* Action Buttons */
+    .btn { padding:5px 10px; border:none; border-radius:5px; cursor:pointer; color:#fff; font-size:12px; transition:all 0.3s ease; }
+    .btn.edit { background:#28a745; }
+    .btn.edit:hover { background:#1e7e34; }
+    .btn.delete { background:#dc3545; }
+    .btn.delete:hover { background:#a71d2a; }
+
+    /* Responsive */
+    @media(max-width:768px){
+      .summary-cards { flex-direction:column; }
+      table { min-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="sidebarContainer"></div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h3>Total Balance</h3>
+        <p id="totalBalance">₹0</p>
+      </div>
+      <div class="summary-card">
+        <h3>Total Income</h3>
+        <p id="totalIncome">₹0</p>
+      </div>
+      <div class="summary-card">
+        <h3>Total Expenses</h3>
+        <p id="totalExpenses">₹0</p>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <h1>Transactions</h1>
+      <div>
+        <select id="filterType">
+          <option value="All">All</option>
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+        </select>
+        <button id="addTransactionBtn">+ Add Transaction</button>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="transactionModal">
+      <div>
+        <h2>Add Transaction</h2>
+        <form id="transactionForm">
+          <div class="error" id="errorMsg">Please fill all fields correctly</div>
+          <label>Date:</label>
+          <input type="date" id="date" required>
+          <label>Description:</label>
+          <input type="text" id="description" required>
+          <label>Category:</label>
+          <input type="text" id="category" required>
+          <label>Amount:</label>
+          <input type="number" id="amount" min="0" required>
+          <label>Type:</label>
+          <select id="type" required>
+            <option value="Income">Income</option>
+            <option value="Expense">Expense</option>
+          </select>
+          <div style="display:flex; gap:10px; margin-top:15px;">
+            <button type="submit" class="modal-btn add-btn">Add</button>
+            <button type="button" class="modal-btn cancel-btn" id="closeModal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="transactions-card">
+      <table id="transactionsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Amount (₹)</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="emptyMsg" style="text-align:center;margin-top:10px;color:#555;display:none;">No transactions yet.</p>
+    </div>
+  </div>
+
+  <script>
+    // Load Sidebar
+    fetch('sidebar.html')
+      .then(res => res.text())
+      .then(data => document.getElementById('sidebarContainer').innerHTML = data)
+      .catch(err => console.error('Sidebar load error:', err));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+      const tableBody = document.querySelector('#transactionsTable tbody');
+      const modal = document.getElementById('transactionModal');
+      const addBtn = document.getElementById('addTransactionBtn');
+      const closeBtn = document.getElementById('closeModal');
+      const form = document.getElementById('transactionForm');
+      const errorMsg = document.getElementById('errorMsg');
+      const filterType = document.getElementById('filterType');
+
+      const totalBalanceElem = document.getElementById('totalBalance');
+      const totalIncomeElem = document.getElementById('totalIncome');
+      const totalExpensesElem = document.getElementById('totalExpenses');
+      const emptyMsg = document.getElementById('emptyMsg');
+
+      function formatDate(d) {
+        const date = new Date(d);
+        return date.toLocaleDateString('en-US', { day:'2-digit', month:'short', year:'numeric' });
+      }
+
+      function updateSummary() {
+        const income = transactions.filter(t=>t.type==='Income').reduce((a,b)=>a+b.amount,0);
+        const expense = transactions.filter(t=>t.type==='Expense').reduce((a,b)=>a+b.amount,0);
+        totalIncomeElem.textContent = `₹${income}`;
+        totalExpensesElem.textContent = `₹${expense}`;
+        totalBalanceElem.textContent = `₹${income-expense}`;
+      }
+
+      function renderTransactions(filter='All') {
+        tableBody.innerHTML = '';
+        const filtered = filter==='All'? transactions : transactions.filter(t=>t.type===filter);
+        emptyMsg.style.display = filtered.length === 0 ? 'block' : 'none';
+
+        filtered.slice().reverse().forEach(t=>{
+          const row = document.createElement('tr');
+          const categoryColor = t.type==='Income'?'#28a745':'#dc3545';
+          row.innerHTML = `
+            <td>${formatDate(t.date)}</td>
+            <td>${t.description}</td>
+            <td style="color:${categoryColor}; font-weight:600;">${t.category}</td>
+            <td>₹${t.amount}</td>
+            <td>${t.type}</td>
+            <td>
+              <button class="btn edit">Edit</button>
+              <button class="btn delete">Delete</button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+
+          // Delete
+          row.querySelector('.delete').addEventListener('click', ()=>{
+            transactions = transactions.filter(tr => tr !== t);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            renderTransactions(filterType.value);
+            updateSummary();
+          });
+
+          // Edit
+          row.querySelector('.edit').addEventListener('click', ()=>{
+            modal.classList.add('show');
+            form.date.value = t.date;
+            form.description.value = t.description;
+            form.category.value = t.category;
+            form.amount.value = t.amount;
+            form.type.value = t.type;
+
+            form.onsubmit = (e) => {
+              e.preventDefault();
+              if(!form.date.value||!form.description.value.trim()||!form.category.value.trim()||parseFloat(form.amount.value)<=0){
+                errorMsg.style.display='block'; return;
+              }
+              errorMsg.style.display='none';
+              t.date = form.date.value;
+              t.description = form.description.value.trim();
+              t.category = form.category.value.trim();
+              t.amount = parseFloat(form.amount.value);
+              t.type = form.type.value;
+              localStorage.setItem('transactions', JSON.stringify(transactions));
+              modal.classList.remove('show');
+              renderTransactions(filterType.value);
+              updateSummary();
+              form.reset();
+            };
+          });
+        });
+      }
+
+      addBtn.addEventListener('click', ()=>modal.classList.add('show'));
+      closeBtn.addEventListener('click', ()=>modal.classList.remove('show'));
+
+      form.addEventListener('submit', e=>{
+        e.preventDefault();
+        const date = form.date.value;
+        const description = form.description.value.trim();
+        const category = form.category.value.trim();
+        const amount = parseFloat(form.amount.value);
+        const type = form.type.value;
+
+        if(!date||!description||!category||isNaN(amount)||amount<=0){
+          errorMsg.style.display='block';
+          return;
+        }
+        errorMsg.style.display='none';
+        transactions.push({date,description,category,amount,type});
+        localStorage.setItem('transactions',JSON.stringify(transactions));
+        modal.classList.remove('show');
+        form.reset();
+        renderTransactions(filterType.value);
+        updateSummary();
+      });
+
+      filterType.addEventListener('change', ()=>renderTransactions(filterType.value));
+
+      renderTransactions();
+      updateSummary();
+    });
+  </script>
+
+</body>
+</html>

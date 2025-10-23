@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartGulak Home</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { margin:0; font-family:"Poppins",sans-serif; background:#f5f7fa; display:flex; }
+    #sidebarContainer { flex-shrink:0; }
+    .content { flex:1; padding:20px 30px; overflow-x:hidden; }
+
+    /* Banner */
+    .welcome-banner {
+      background: linear-gradient(90deg,#6c63ff,#3f3d56);
+      color:#fff; border-radius:15px; padding:25px;
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap;
+      transition: all 0.3s ease;
+    }
+    .welcome-banner h1 { font-size:24px; margin-bottom:5px; }
+    .welcome-banner p { font-size:14px; opacity:0.85; }
+
+    /* Cards */
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; margin-bottom:30px; }
+    .card { 
+      background: linear-gradient(135deg,#fff,#f3f4f6); 
+      border-radius:12px; 
+      padding:15px; 
+      box-shadow:0 5px 15px rgba(0,0,0,0.08); 
+      transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+      cursor:pointer;
+    }
+    .card i { font-size:25px; color:#6c63ff; margin-bottom:8px; transition: transform 0.4s ease; }
+    .card h3 { font-size:16px; margin-bottom:3px; color:#1b263b; }
+    .card p { font-size:13px; color:#555; transition: color 0.3s ease; }
+    .card:hover { 
+      transform:translateY(-8px) scale(1.03); 
+      box-shadow:0 15px 25px rgba(0,0,0,0.2); 
+      background: linear-gradient(135deg,#e0e0ff,#f3f4f6);
+    }
+    .card:hover i { transform: scale(1.2) rotate(10deg); }
+    .card:hover p { color:#1b263b; }
+
+    /* Chart Container */
+    .chart-container {
+      background:#fff; 
+      border-radius:12px; 
+      padding:25px; 
+      box-shadow:0 5px 20px rgba(0,0,0,0.15);
+      max-width:700px; 
+      margin:0 auto 30px auto; /* Center align */
+      transition: all 0.4s ease;
+    }
+    .chart-container h3 { 
+      font-size:18px; 
+      margin-bottom:25px; 
+      color:#1b263b; 
+      text-align:center; 
+    }
+
+    @media (max-width: 768px){
+      .welcome-banner { flex-direction:column; align-items:flex-start; }
+      .welcome-banner div:last-child { margin-top:15px; }
+      .cards { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+      .card i { font-size:22px; }
+      .card h3 { font-size:14px; }
+      .card p { font-size:12px; }
+      .chart-container h3 { font-size:16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="sidebarContainer"></div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+      <div>
+        <h1>Welcome, <span id="userHome">User</span>!</h1>
+        <p>Here's a quick overview of your finances today.</p>
+      </div>
+      <div><i class="fa-solid fa-coins fa-3x"></i></div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+      <div class="card">
+        <i class="fa-solid fa-wallet"></i>
+        <h3>Total Balance</h3>
+        <p id="totalBalance">₹0</p>
+      </div>
+      <div class="card">
+        <i class="fa-solid fa-arrow-up"></i>
+        <h3>Total Income</h3>
+        <p id="totalIncome">₹0</p>
+      </div>
+      <div class="card">
+        <i class="fa-solid fa-arrow-down"></i>
+        <h3>Total Expenses</h3>
+        <p id="totalExpenses">₹0</p>
+      </div>
+      <div class="card">
+        <i class="fa-solid fa-bullseye"></i>
+        <h3>Goals</h3>
+        <p id="achieved">0 / 0 Achieved</p>
+      </div>
+    </div>
+
+    <!-- Income vs Expense Chart -->
+    <div class="chart-container">
+      <h3>Income vs Expense</h3>
+      <canvas id="incomeExpenseChart" style="max-height:450px;"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // Load Sidebar
+      fetch('sidebar.html')
+        .then(res => res.text())
+        .then(data => {
+          document.getElementById('sidebarContainer').innerHTML = data;
+          const usernameElem = document.getElementById('username');
+          if(usernameElem) usernameElem.textContent = localStorage.getItem('username') || 'User';
+        });
+
+      // Username
+      const username = localStorage.getItem('username');
+      if(!username && window.location.pathname !== '/index.html') window.location.href='index.html';
+      document.getElementById('userHome').textContent = username || 'User';
+
+      // Load Transactions
+      const transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+      let totalIncome = 0, totalExpenses = 0;
+      transactions.forEach(t=>{
+        if(t.type==='Income') totalIncome+=t.amount;
+        else if(t.type==='Expense') totalExpenses+=t.amount;
+      });
+      document.getElementById('totalIncome').textContent=`₹${totalIncome}`;
+      document.getElementById('totalExpenses').textContent=`₹${totalExpenses}`;
+      document.getElementById('totalBalance').textContent=`₹${totalIncome-totalExpenses}`;
+
+      // Income vs Expense Chart
+      const ctx1 = document.getElementById('incomeExpenseChart').getContext('2d');
+      new Chart(ctx1,{
+        type:'bar',
+        data:{
+          labels:['Income','Expense'],
+          datasets:[{
+            label:'Amount (₹)',
+            data:[totalIncome,totalExpenses],
+            backgroundColor:['#28a745','#dc3545'],
+            borderRadius: 12, 
+            barThickness: 60, 
+          }]
+        },
+        options:{
+          responsive:true,
+          animation: { duration: 1500, easing: 'easeOutBounce' },
+          plugins:{ legend:{ display:false } },
+          scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true } }
+        }
+      });
+
+      // Read Goals from localStorage (goals are stored by `goals.html` in localStorage)
+      (function updateGoalsSummary(){
+        try{
+          const goals = JSON.parse(localStorage.getItem('goals')) || [];
+          const totalGoals = goals.length;
+          const achievedGoals = goals.filter(g => (g.status === 'Achieved' || (g.saved && g.target && g.saved >= g.target))).length;
+          document.getElementById('achieved').textContent = `${achievedGoals} / ${totalGoals} Achieved`;
+        }catch(err){
+          console.warn('Could not read goals from localStorage', err);
+          document.getElementById('achieved').textContent = `0 / 0 Achieved`;
+        }
+      })();
+
+    });
+  </script>
+
+</body>
+</html>

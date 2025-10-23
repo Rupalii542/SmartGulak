@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - SmartGulak</title>
+<style>
+  body {
+    background: #0d1b2a;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: #1b263b;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    width: 320px;
+    text-align: center;
+  }
+  h2 { color: #6c63ff; margin-bottom: 20px; }
+  input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 8px;
+  }
+  button {
+    background: #6c63ff;
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button:hover { background: #5548e7; }
+  a { color: #6c63ff; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email address" required>
+    <input type="password" id="loginPass" placeholder="Password" required>
+    <button onclick="login()">Login</button>
+    <p style="margin-top:10px;">Don’t have an account? <a href="register.html">Register</a></p>
+    <p style="text-align: right; margin-top: 5px;">
+  <a href="forgot.html" style="color:#6c63ff; text-decoration:none; align-content:  center;">Forgot Password?</a>
+</p>
+
+  </div>
+
+  <script>
+    function login() {
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPass').value.trim();
+
+      if (!email || !pass) {
+        alert('Please fill all fields');
+        return;
+      }
+
+      const users = JSON.parse(localStorage.getItem('users')) || {};
+
+      if (users[email] && users[email] === pass) {
+        localStorage.setItem('username', email);
+        window.location.href = 'sidebar.html';
+      } else {
+        alert('Invalid email or password');
+      }
+    }
+  </script>
+</body>
+</html>

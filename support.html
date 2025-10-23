@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartGulak Support</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<style>
+body { margin:0; font-family:"Poppins",sans-serif; display:flex; background:#f5f7fa; }
+#sidebarContainer { flex-shrink:0; }
+.content { flex:1; padding:20px 30px; overflow-x:hidden; }
+h1 { color:#1b263b; margin-bottom:20px; }
+
+/* Support Form */
+.support-form { background:#fff; padding:25px; border-radius:15px; box-shadow:0 8px 20px rgba(0,0,0,0.12); max-width:700px; margin-bottom:30px; transition:0.3s; }
+.support-form:hover { box-shadow:0 12px 30px rgba(0,0,0,0.15); }
+.support-form label { display:block; margin:10px 0 5px; font-weight:500; }
+.support-form input, .support-form textarea { width:100%; padding:12px; border-radius:8px; border:1px solid #ccc; outline:none; transition:0.3s; }
+.support-form input:focus, .support-form textarea:focus { border-color:#6c63ff; box-shadow:0 0 5px rgba(108,99,255,0.3); }
+.support-form button { margin-top:12px; background:#6c63ff; color:#fff; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; transition:0.3s; }
+.support-form button:hover { background:#574fd6; }
+
+/* Tickets Table */
+.tickets-table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.08); transition:0.3s; }
+.tickets-table thead { background:#6c63ff; color:#fff; }
+.tickets-table th, .tickets-table td { padding:12px 15px; text-align:left; }
+.tickets-table tbody tr { border-bottom:1px solid #eee; }
+.tickets-table tbody tr:last-child { border-bottom:none; }
+.tickets-table tbody tr:hover { background:#f1f3f6; }
+
+/* Responsive */
+@media(max-width:992px){ .tickets-table, .support-form { width:100%; font-size:14px; } }
+@media(max-width:768px){ .content { padding:15px; } }
+@media(max-width:480px){ .support-form input, .support-form textarea { padding:10px; } .support-form button { width:100%; } }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebarContainer"></div>
+
+<div class="content">
+  <h1>Support</h1>
+
+  <div class="support-form">
+    <h2>Submit a Ticket</h2>
+    <form id="supportForm">
+      <label for="subject">Subject:</label>
+      <input type="text" id="subject" required placeholder="Enter subject">
+      <label for="message">Message:</label>
+      <textarea id="message" required placeholder="Enter your message"></textarea>
+      <label for="email">Your Email:</label>
+      <input type="email" id="email" required placeholder="Enter your email">
+      <button type="submit">Submit & Send Email</button>
+    </form>
+  </div>
+
+  <h2>My Tickets</h2>
+  <table class="tickets-table">
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Message</th>
+        <th>Email</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="ticketsTableBody"></tbody>
+  </table>
+</div>
+
+<script>
+  // Initialize EmailJS
+  emailjs.init("JvC6HMd-zwoNlFQF2"); // Replace with your EmailJS User ID
+
+  // Load Sidebar
+  fetch('sidebar.html')
+    .then(res=>res.text())
+    .then(data=>{
+      document.getElementById('sidebarContainer').innerHTML = data;
+      const usernameElem = document.getElementById('username');
+      if(usernameElem) usernameElem.textContent = localStorage.getItem('username') || 'User';
+    });
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const username = localStorage.getItem('username');
+    if(!username && window.location.pathname !== '/index.html') window.location.href='index.html';
+
+    const toggleBtn = document.getElementById('toggleBtn');
+    const sidebar = document.getElementById('sidebar');
+    if(toggleBtn && sidebar){
+      toggleBtn.addEventListener('click', ()=>{
+        sidebar.classList.toggle('collapsed');
+        toggleBtn.querySelector('i').classList.toggle('fa-angle-right');
+        toggleBtn.querySelector('i').classList.toggle('fa-angle-left');
+      });
+    }
+
+    const supportForm = document.getElementById('supportForm');
+    const ticketsTableBody = document.getElementById('ticketsTableBody');
+    let tickets = JSON.parse(localStorage.getItem('tickets')) || [];
+
+    function renderTickets(){
+      ticketsTableBody.innerHTML='';
+      tickets.forEach(ticket=>{
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${ticket.subject}</td><td>${ticket.message}</td><td>${ticket.email}</td><td>${ticket.status}</td>`;
+        ticketsTableBody.appendChild(row);
+      });
+    }
+
+    renderTickets();
+
+    supportForm.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const subject = document.getElementById('subject').value;
+      const message = document.getElementById('message').value;
+      const email = document.getElementById('email').value;
+
+      if(subject && message && email){
+        const ticket = {subject,message,email,status:'Pending'};
+        tickets.push(ticket);
+        localStorage.setItem('tickets',JSON.stringify(tickets));
+        renderTickets();
+        supportForm.reset();
+
+        // Send Email via EmailJS to YOUR EMAIL
+        emailjs.send("service_fztu3bo","template_mejx2rm",{
+          from_name: email,
+          from_email: email,
+          to_name: "Rupali",        // replace with your name
+          subject: subject,
+          message: message
+        }).then(res=>{
+          alert("Ticket submitted & email sent to admin!");
+        }, err=>{
+          alert("Ticket saved locally but email failed: "+err.text);
+        });
+      }
+    });
+  });
+</script>
+</body>
+</html>
