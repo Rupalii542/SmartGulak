@@ -3,34 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Savings - SmartGulak</title>
-  <link rel="stylesheet" href="style.css">
+  <title>SmartGulak AI Advisor 2.0</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    * {margin:0; padding:0; box-sizing:border-box; font-family:"Poppins",sans-serif;}
+    body {display:flex; min-height:100vh; background:#f5f7fa; flex-direction:row;}
+    #sidebarContainer {flex-shrink:0;}
+
+    .content {
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:40px;
+    }
+
+    .advisor-box {
+      background:#fff;
+      width:500px;
+      max-width:100%;
+      padding:25px 30px;
+      border-radius:20px;
+      box-shadow:0 8px 25px rgba(0,0,0,0.1);
+      position:relative;
+      overflow:hidden;
+      animation:fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);}}
+
+    h2 {color:#6c63ff; font-size:22px; margin-bottom:5px; text-align:center;}
+    .ai-sub {color:#555; font-size:14px; margin-bottom:15px; text-align:center;}
+
+    .data-summary {
+      display:flex;
+      justify-content:space-around;
+      background:#f0f0ff;
+      border-radius:12px;
+      padding:10px;
+      margin-bottom:20px;
+      flex-wrap:wrap;
+    }
+
+    .data-summary div {text-align:center; flex:1; min-width:100px; margin:5px 0;}
+    .data-summary h4 {color:#6c63ff; font-size:14px;}
+    .data-summary p {font-weight:600; color:#1b263b;}
+
+    .chat-box {
+      background:#f9f9ff;
+      border-radius:12px;
+      padding:15px;
+      max-height:250px;
+      overflow-y:auto;
+      margin-bottom:15px;
+      border:1px solid #eee;
+    }
+
+    .msg {background:#e5e5ff; padding:10px 14px; border-radius:10px; margin:8px 0; color:#333; width:fit-content; animation:slideIn 0.4s ease;}
+    @keyframes slideIn {from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);}}
+
+    button {
+      background:#6c63ff; color:#fff; border:none;
+      padding:10px 20px; border-radius:10px; font-size:15px;
+      cursor:pointer; transition:0.3s; display:block; margin:0 auto;
+    }
+    button:hover {background:#5147e0;}
+
+    .typing {font-style:italic; color:#777; margin-top:5px; text-align:center; animation:blink 1s infinite;}
+    @keyframes blink {50% {opacity:0.4;}}
+
+    /* Responsive */
+    @media (max-width:768px){
+      body{flex-direction:column;}
+      .content{padding:20px;}
+      .advisor-box{width:100%; padding:20px;}
+      .data-summary{flex-direction:column; align-items:center;}
+      .chat-box{max-height:200px;}
+    }
+
+    @media (max-width:480px){
+      h2{font-size:20px;}
+      .ai-sub{font-size:13px;}
+      button{width:100%; font-size:14px;}
+    }
+  </style>
 </head>
 <body>
+
+  <!-- Sidebar -->
   <div id="sidebarContainer"></div>
 
   <div class="content">
-    <h1>Savings Overview</h1>
-    <p>Analyze how your savings are growing over time.</p>
-    <canvas id="savingsChart"></canvas>
+    <div class="advisor-box">
+      <h2>🤖 SmartGulak AI Advisor</h2>
+      <p class="ai-sub">Your personal finance assistant — powered by your data</p>
+
+      <div class="data-summary">
+        <div><h4>Income</h4><p id="incomeVal">₹0</p></div>
+        <div><h4>Expense</h4><p id="expenseVal">₹0</p></div>
+        <div><h4>Savings</h4><p id="savingVal">₹0</p></div>
+      </div>
+
+      <div class="chat-box" id="chatBox">
+        <div class="msg">👋 Hello! I’m your SmartGulak AI Advisor.</div>
+        <div class="msg">Click “Analyze” to get personalized insights.</div>
+      </div>
+
+      <p id="typing" class="typing" style="display:none;">AI is thinking...</p>
+
+      <button id="analyzeBtn">🔍 Analyze My Finances</button>
+    </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="main.js"></script>
   <script>
-    const ctx = document.getElementById('savingsChart');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun'],
-        datasets: [{
-          label: 'Savings ($)',
-          data: [200,400,650,900,1200,1600],
-          borderColor: '#6c63ff',
-          tension: 0.3
-        }]
-      },
-      options: { responsive: true }
+    // Sidebar load
+    fetch('sidebar.html')
+      .then(res => res.text())
+      .then(data => document.getElementById('sidebarContainer').innerHTML = data)
+      .catch(err => console.error('Sidebar load error:', err));
+
+    const incomeEl = document.getElementById('incomeVal');
+    const expenseEl = document.getElementById('expenseVal');
+    const savingEl = document.getElementById('savingVal');
+    const chatBox = document.getElementById('chatBox');
+    const typingEl = document.getElementById('typing');
+
+    const speak = (text) => {
+      const synth = window.speechSynthesis;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1;
+      utter.pitch = 1.1;
+      synth.speak(utter);
+    };
+
+    const printMessage = (msg, delay=1000, speakText=false) => {
+      return new Promise((resolve) => {
+        typingEl.style.display = "block";
+        setTimeout(() => {
+          typingEl.style.display = "none";
+          const div = document.createElement('div');
+          div.classList.add('msg');
+          div.textContent = msg;
+          chatBox.appendChild(div);
+          chatBox.scrollTop = chatBox.scrollHeight;
+          if(speakText) speak(msg);
+          resolve();
+        }, delay);
+      });
+    };
+
+    document.getElementById("analyzeBtn").addEventListener("click", async () => {
+      chatBox.innerHTML = "";
+      typingEl.style.display = "block";
+
+      const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+      const goals = JSON.parse(localStorage.getItem("goals")) || [];
+
+      const totalIncome = transactions.filter(t=>t.type==="Income").reduce((a,b)=>a+b.amount,0);
+      const totalExpense = transactions.filter(t=>t.type==="Expense").reduce((a,b)=>a+b.amount,0);
+      const totalSaving = totalIncome - totalExpense;
+
+      incomeEl.textContent = `₹${totalIncome}`;
+      expenseEl.textContent = `₹${totalExpense}`;
+      savingEl.textContent = `₹${totalSaving}`;
+
+      const totalGoalTarget = goals.reduce((a,g)=>a+(parseFloat(g.target)||0),0);
+      const totalGoalSaved = goals.reduce((a,g)=>a+(parseFloat(g.saved)||0),0);
+      const avgProgress = totalGoalTarget ? (totalGoalSaved/totalGoalTarget)*100 : 0;
+
+      const tips = [
+        "💡 Try using auto-transfer to your savings account weekly.",
+        "📅 Review your expense categories — small changes add up.",
+        "🎯 Set short-term goals to stay motivated!",
+        "🍀 Remember, consistency beats intensity in saving!"
+      ];
+      const randomTip = tips[Math.floor(Math.random()*tips.length)];
+
+      // Intelligent logic for custom insights
+      await printMessage("🤔 Analyzing your recent financial activity...", 1500);
+      
+      if(totalExpense > totalIncome * 0.8)
+        await printMessage("⚠️ Your expenses are taking up more than 80% of your income. Consider trimming optional costs.", 1200, true);
+      else if(totalExpense < totalIncome * 0.5)
+        await printMessage("💰 Great work! You're saving more than half your income. Excellent control!", 1200, true);
+      else
+        await printMessage("📊 Your spending seems balanced, but aim for saving at least 30% of income.", 1200, true);
+
+      if(avgProgress > 0){
+        if(avgProgress < 25)
+          await printMessage("🚀 You’ve just started your goals journey — keep pushing forward!", 1000, true);
+        else if(avgProgress < 75)
+          await printMessage("💪 You’re halfway to your goals — consistency will get you there soon.", 1000, true);
+        else
+          await printMessage("🎉 Excellent! You’re close to achieving most of your goals!", 1000, true);
+      } else {
+        await printMessage("🎯 No goals found yet — set one to start tracking progress.", 1000, true);
+      }
+
+      if(totalSaving < 0)
+        await printMessage("❌ Warning: You’re spending more than you earn. Time to review your transactions.", 1000, true);
+      else if(totalSaving > totalIncome * 0.3)
+        await printMessage("🏦 You’re in great shape — saving over 30% of income this month!", 1000, true);
+      else
+        await printMessage("📈 Try saving a bit more — small boosts make big differences!", 1000, true);
+
+      await printMessage(randomTip, 1000, true);
+      await printMessage("✨ That’s your personalized insight summary. Keep going strong! 💜", 1000, true);
     });
   </script>
 </body>
